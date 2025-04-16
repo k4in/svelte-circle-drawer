@@ -16,14 +16,24 @@
   let history = $state(-1);
 
   function undo() {
+    selectedCircle = null;
+    status = 'drawing';
     circles = snapshots[--history];
   }
   function redo() {
+    selectedCircle = null;
+    status = 'drawing';
     circles = snapshots[++history];
   }
   function snapshot() {
     history++;
     snapshots.push($state.snapshot(circles));
+  }
+
+  function testlog() {
+    console.log($state.snapshot(snapshots));
+    console.log($state.snapshot(history));
+    console.log($state.snapshot(selectedCircle));
   }
 
   function drawCircle(event: MouseEvent) {
@@ -38,7 +48,7 @@
     };
 
     circles.push(circle);
-    selectedCircle = circle;
+    selectedCircle = circles[circles.length - 1];
     status = 'editing';
     snapshot();
   }
@@ -51,8 +61,11 @@
   onclick={(event) => {
     event.stopPropagation();
     if (event.target === event.currentTarget) {
-      selectedCircle = null;
-      snapshot();
+      if (selectedCircle) {
+        status = 'drawing';
+        selectedCircle = null;
+        snapshot();
+      }
     }
   }}
 >
@@ -60,17 +73,18 @@
     <button
       onclick={undo}
       disabled={history === -1}
-      class="px-3 py-2 bg-teal-700 hover:bg-teal-600 transition-colors rounded font-bold text-sm"
+      class="px-3 py-2 bg-teal-700 hover:bg-teal-600 transition-colors rounded font-bold text-sm disabled:hover:bg-teal-700 disabled:text-neutral-400 disabled:cursor-not-allowed"
     >
       Undo
     </button>
     <button
       onclick={redo}
       disabled={history === snapshots.length - 1}
-      class="px-3 py-2 bg-teal-700 hover:bg-teal-600 transition-colors rounded font-bold text-sm"
+      class="px-3 py-2 bg-teal-700 hover:bg-teal-600 transition-colors rounded font-bold text-sm disabled:hover:bg-teal-700 disabled:text-neutral-400 disabled:cursor-not-allowed"
     >
       Redo
     </button>
+    <button onclick={testlog}>log</button>
   </div>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -89,7 +103,6 @@
           event.stopPropagation();
           selectedCircle = circle;
           status = 'editing';
-          snapshot();
         }}
       ></circle>
     {/each}

@@ -22,7 +22,8 @@
     status = 'drawing';
 
     if (history > 0) {
-      circles = snapshots[--history];
+      history--;
+      circles = deepCopyCircles(snapshots[history]);
     }
   }
 
@@ -31,19 +32,23 @@
     status = 'drawing';
 
     if (history < snapshots.length - 1) {
-      circles = snapshots[++history];
+      history++;
+      circles = deepCopyCircles(snapshots[history]);
     }
   }
 
-  function snapshot() {
-    if (history < snapshots.length - 1) {
-      const test = $state.snapshot(snapshots).slice(0, history + 1);
-      console.log(test);
-      snapshots = $state.snapshot(snapshots).slice(0, history + 1);
-    }
+  function deepCopyCircles(circles: Circle[]): Circle[] {
+    return circles.map((c) => ({ ...c }));
+  }
 
-    history++;
-    snapshots.push($state.snapshot(circles));
+  function snapshot() {
+    // Truncate redo history if not at the end
+    if (history < snapshots.length - 1) {
+      snapshots = snapshots.slice(0, history + 1);
+    }
+    // Push a deep copy of the current circles
+    snapshots.push(deepCopyCircles(circles));
+    history = snapshots.length - 1;
   }
 
   function drawCircle(event: MouseEvent) {
@@ -57,7 +62,8 @@
       r: 25,
     };
 
-    circles.push(circle);
+    // Replace the array, don't mutate
+    circles = [...circles, circle];
     selectedCircle = circles[circles.length - 1];
     status = 'editing';
     snapshot();

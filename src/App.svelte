@@ -12,28 +12,38 @@
   let circles = $state<Circle[]>([]);
   let selectedCircle = $state<Circle | null>(null);
 
-  let snapshots: Circle[][] = [];
-  let history = $state(-1);
+  let initialRadius = $state(0);
+
+  let snapshots: Circle[][] = $state([[]]);
+  let history = $state(0);
 
   function undo() {
     selectedCircle = null;
     status = 'drawing';
-    circles = snapshots[--history];
+
+    if (history > 0) {
+      circles = snapshots[--history];
+    }
   }
+
   function redo() {
     selectedCircle = null;
     status = 'drawing';
-    circles = snapshots[++history];
-  }
-  function snapshot() {
-    history++;
-    snapshots.push($state.snapshot(circles));
+
+    if (history < snapshots.length - 1) {
+      circles = snapshots[++history];
+    }
   }
 
-  function testlog() {
-    console.log($state.snapshot(snapshots));
-    console.log($state.snapshot(history));
-    console.log($state.snapshot(selectedCircle));
+  function snapshot() {
+    if (history < snapshots.length - 1) {
+      const test = $state.snapshot(snapshots).slice(0, history + 1);
+      console.log(test);
+      snapshots = $state.snapshot(snapshots).slice(0, history + 1);
+    }
+
+    history++;
+    snapshots.push($state.snapshot(circles));
   }
 
   function drawCircle(event: MouseEvent) {
@@ -64,7 +74,6 @@
       if (selectedCircle) {
         status = 'drawing';
         selectedCircle = null;
-        snapshot();
       }
     }
   }}
@@ -72,7 +81,7 @@
   <div class="flex items-center mb-2 gap-2">
     <button
       onclick={undo}
-      disabled={history === -1}
+      disabled={history < 1}
       class="px-3 py-2 bg-teal-700 hover:bg-teal-600 transition-colors rounded font-bold text-sm disabled:hover:bg-teal-700 disabled:text-neutral-400 disabled:cursor-not-allowed"
     >
       Undo
@@ -84,7 +93,13 @@
     >
       Redo
     </button>
-    <button onclick={testlog}>log</button>
+    <button
+      onclick={() => {
+        console.log($state.snapshot(history), $state.snapshot(snapshots), $state.snapshot(circles));
+      }}
+    >
+      öpg
+    </button>
   </div>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -110,7 +125,17 @@
   {#if status === 'editing' && selectedCircle}
     <div class="flex mt-2 flex-col items-center">
       <h2>Adjust diameter of circle at ({selectedCircle.cx}, {selectedCircle.cy})</h2>
-      <input type="range" step="1" min="0" max="100" bind:value={selectedCircle.r} />
+      <input
+        onpointerdown={() => (initialRadius = selectedCircle?.r || 0)}
+        onpointerup={() => {
+          if (initialRadius !== selectedCircle?.r) snapshot();
+        }}
+        type="range"
+        step="1"
+        min="0"
+        max="100"
+        bind:value={selectedCircle.r}
+      />
     </div>
   {/if}
 </main>
